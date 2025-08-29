@@ -1,0 +1,21 @@
+name: igra
+channels: 
+  - conda-forge
+dependencies:
+  - python=3.11
+  - numpy
+  - pandas
+  - pyarrow
+  - fastparquet
+  - xarray
+  - requests
+  - aiohttp
+  - tqdm
+  - duckdb
+  - pyproj
+  - matplotlib
+  - metpy
+  - siphon
+  - ruff
+  - black
+  - pre-commit
