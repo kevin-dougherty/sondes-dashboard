@@ -5,18 +5,22 @@ One-off utility script to generate the list of U.S. IGRA station IDs.
 
 - Downloads the official IGRA station inventory from NCEI
 - Reads it as a fixed-width file using pandas
-- Filters for U.S. stations including Puerto Rico and Guam (IDs beginning with US, RQM, or GQM) 
-  whose end_year is 2025 (i.e., currently active stations)
+- Filters for U.S. stations including Puerto Rico and Guam
+  (IDs beginning with US, RQM, or GQM) whose end_year is 2025
+  (i.e., currently active stations)
 - Saves the station IDs into `../conf/stations_us.txt`
 
-This script is not part of the dashboard pipeline; it's intended 
+This script is not part of the dashboard pipeline; it's intended
 to bootstrap the list of U.S. stations for configuration purposes.
 """
 
 import pandas as pd
 
 # Define the URL of the text file
-url = "https://www.ncei.noaa.gov/data/integrated-global-radiosonde-archive/doc/igra2-station-list.txt"
+url = (
+    "https://www.ncei.noaa.gov/data/integrated-global-"
+    "radiosonde-archive/doc/igra2-station-list.txt"
+)
 
 # Define column widths based on the text file structure
 col_widths = [11, 9, 10, 7, 3, 30, 6, 5, 8]
