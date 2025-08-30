@@ -27,8 +27,15 @@ col_widths = [11, 9, 10, 7, 3, 30, 6, 5, 8]
 
 # Define column names
 col_names = [
-    "stnid", "lat", "lon", "elev", "state",
-    "city", "start_year", "end_year", "data"
+    "stnid",
+    "lat",
+    "lon",
+    "elev",
+    "state",
+    "city",
+    "start_year",
+    "end_year",
+    "data",
 ]
 
 # Read the fixed-width file
