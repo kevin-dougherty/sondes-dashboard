@@ -1,0 +1,24 @@
+name: Pycodestyle
+on: [push, pull_request]
+
+jobs:
+  pycodestyle:
+    runs-on: ubuntu-latest
+    name: Check Python coding style (pycodestyle)
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        path: sonde-dashboard
+
+    - name: Install dependencies
+      run: |
+        pip install --upgrade pip
+        pip install pycodestyle
+
+    - name: Run pycodestyle
+      run: |
+        cd $GITHUB_WORKSPACE/sonde-dashboard
+        pycodestyle -v --config ./.pycodestyle .
+

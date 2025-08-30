@@ -1,0 +1,29 @@
+name: Check Norms
+on: [push, pull_request]
+
+jobs:
+  check_norms:
+    runs-on: ubuntu-latest
+    name: Check Python coding norms (Black + Ruff)
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        path: sonde-dashboard
+
+    - name: Install dependencies
+      run: |
+        pip install --upgrade pip
+        pip install black ruff
+
+    - name: Run Black (check only)
+      run: |
+        cd $GITHUB_WORKSPACE/sonde-dashboard
+        black --check --diff .
+
+    - name: Run Ruff
+      run: |
+        cd $GITHUB_WORKSPACE/sonde-dashboard
+        ruff check --output-format=github .
+
