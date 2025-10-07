@@ -23,7 +23,7 @@ def write_parquet(df: pd.DataFrame):
     if df.empty:
         return
     for (stn, day), dfg in df.groupby([df.station_id, df.time.dt.strftime("%Y-%m-%d")]):
-        out = PARQUET_DIR / f"station_id={stn}" / f"date={day}"
+        out = PARQUET_DIR / f"{stn}" / f"{day}"
         out.mkdir(parents=True, exist_ok=True)
         pq.write_table(pa.Table.from_pandas(dfg), out / "part.parquet", compression="snappy")
 
