@@ -8,6 +8,7 @@ tables for the dashboard:
   - band_stats_daily       (median / p95 for T, Td, wind by band, daily)
   - station_uptime         (last seen and staleness, per station)
 """
+
 from __future__ import annotations
 
 import argparse
@@ -25,6 +26,7 @@ WINDOWS = {
     # ytd handled specially below
 }
 
+
 def ytd_days(end_dt):
     """
     Calculates number of days to Jan 1 for Y2D stats.
@@ -33,7 +35,9 @@ def ytd_days(end_dt):
     return (end_dt - jan1).days + 1
 
 
-def compute_and_store_metrics(db_path: Path, end: datetime, windows: list[str] | None = None):
+def compute_and_store_metrics(
+    db_path: Path, end: datetime, windows: list[str] | None = None
+):
     """
     Compute dashboard metrics for multiple windows and update and insert into DuckDB.
     Creates/updates:
@@ -49,7 +53,8 @@ def compute_and_store_metrics(db_path: Path, end: datetime, windows: list[str] |
     db.execute("SET TimeZone='UTC';")
 
     # Create schemas once (now with `window`)
-    db.execute("""
+    db.execute(
+        """
     CREATE TABLE IF NOT EXISTS launches_by_cycle (
       window TEXT,
       cycle TIMESTAMPTZ,
@@ -76,7 +81,8 @@ def compute_and_store_metrics(db_path: Path, end: datetime, windows: list[str] |
       last_seen TIMESTAMPTZ,
       days_since_last DOUBLE
     );
-    """)
+    """
+    )
 
     for w in windows:
         days = ytd_days(end) if w == "ytd" else WINDOWS[w]
@@ -84,10 +90,13 @@ def compute_and_store_metrics(db_path: Path, end: datetime, windows: list[str] |
 
         # Rebuild a view limited to this window
         db.execute("DROP VIEW IF EXISTS _v;")
-        db.execute("""
+        db.execute(
+            """
           CREATE VIEW _v AS
           SELECT * FROM soundings WHERE time BETWEEN ? AND ?;
-        """, [start, end])
+        """,
+            [start, end],
+        )
 
         # Clean the overlapping rows for this window label only
         db.execute("DELETE FROM launches_by_cycle WHERE window = ?;", [w])
@@ -96,7 +105,8 @@ def compute_and_store_metrics(db_path: Path, end: datetime, windows: list[str] |
         db.execute("DELETE FROM station_uptime WHERE window = ?;", [w])
 
         # 1) Launches per 00/12Z
-        db.execute("""
+        db.execute(
+            """
         INSERT INTO launches_by_cycle
         WITH shots AS (
           SELECT station, date_trunc('hour', time) AS cycle
@@ -113,10 +123,13 @@ def compute_and_store_metrics(db_path: Path, end: datetime, windows: list[str] |
                100.0 * c.stations_reporting / NULLIF(d.n,0) AS pct_reporting
         FROM counts c, denom d
         ORDER BY c.cycle;
-        """, [w])
+        """,
+            [w],
+        )
 
         # 2) Missingness by band
-        db.execute("""
+        db.execute(
+            """
         CREATE TEMP TABLE _banded AS
         SELECT *, CASE
            WHEN pressure BETWEEN 850 AND 1000 THEN '1000_850'
@@ -146,10 +159,13 @@ def compute_and_store_metrics(db_path: Path, end: datetime, windows: list[str] |
                100.0 * p.present_pairs / NULLIF(d.denom,0) AS pct_present
         FROM per_cycle p JOIN denom d USING(date)
         ORDER BY p.date, p.band;
-        """, [w])
+        """,
+            [w],
+        )
 
         # 3) Band stats daily
-        db.execute("""
+        db.execute(
+            """
         INSERT INTO band_stats_daily
         WITH daily AS (
           SELECT date_trunc('day', time) AS date, band,
@@ -163,10 +179,13 @@ def compute_and_store_metrics(db_path: Path, end: datetime, windows: list[str] |
         FROM daily
         GROUP BY date, band
         ORDER BY date, band;
-        """, [w])
+        """,
+            [w],
+        )
 
         # 4) Station uptime
-        db.execute("""
+        db.execute(
+            """
         INSERT INTO station_uptime
         SELECT ? AS window, station,
                MAX(time) AS last_seen,
@@ -174,7 +193,9 @@ def compute_and_store_metrics(db_path: Path, end: datetime, windows: list[str] |
         FROM _v
         GROUP BY station
         ORDER BY station;
-        """, [w])
+        """,
+            [w],
+        )
 
     db.close()
     print(f"Metrics updated for windows: {', '.join(windows)}")
