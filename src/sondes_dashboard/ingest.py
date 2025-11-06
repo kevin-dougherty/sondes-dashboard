@@ -9,6 +9,7 @@ CLI:
     python -m sondes_dashboard.ingest --stations-file conf/stations_us.txt \
         --db data/igra.duckdb --end 2025101412 --days 365 --workers 8
 """
+
 from __future__ import annotations
 
 import argparse
@@ -22,7 +23,7 @@ import pandas as pd
 from siphon.simplewebservice.igra2 import IGRAUpperAir
 from tqdm import tqdm
 
-DEFAULT_WINDOW_DAYS = 400 # more than one year for any overlap/backfill
+DEFAULT_WINDOW_DAYS = 400  # more than one year for any overlap/backfill
 
 
 def fetch_igra(
@@ -173,7 +174,9 @@ def run(
     pieces: list[pd.DataFrame] = []
 
     with cf.ThreadPoolExecutor(max_workers=workers) as ex:
-        futs = {ex.submit(fetch_igra, s, start, end, not all_hours): s for s in stations}
+        futs = {
+            ex.submit(fetch_igra, s, start, end, not all_hours): s for s in stations
+        }
         for fut in tqdm(cf.as_completed(futs), total=len(futs), desc="Fetch IGRA"):
             station = futs[fut]
             try:

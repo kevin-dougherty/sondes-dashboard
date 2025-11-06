@@ -14,7 +14,9 @@ import pandas as pd
 import streamlit as st
 from pathlib import Path
 
-DB_PATH = Path("/Users/kevindougherty25/python-projects/sondes-dashboard/data/igra.duckdb")
+DB_PATH = Path(
+    "/Users/kevindougherty25/python-projects/sondes-dashboard/data/igra.duckdb"
+)
 WINDOWS = ["7d", "30d", "3mo", "6mo", "ytd", "1yr"]
 
 st.set_page_config(page_title="Sondes Dashboard", layout="wide")
@@ -25,7 +27,10 @@ with st.sidebar:
     st.header("Controls")
     db_file = st.text_input("DuckDB file", str(DB_PATH))
     win = st.selectbox("Window", WINDOWS, index=0)
-    st.caption("Tip: update metrics via your cron/ingest jobs; this app only reads DuckDB.")
+    st.caption(
+        "Tip: update metrics via your cron/ingest jobs; this app only reads DuckDB."
+    )
+
 
 # --- DB connection helper (reused safely) ---
 @st.cache_resource(show_spinner=False)
@@ -33,49 +38,67 @@ def get_con(db_path: str):
     # read_only=True prevents accidental writes from the app
     return duckdb.connect(db_path, read_only=True)
 
+
 con = get_con(db_file)
+
 
 # Small helpers to cache queries per window
 @st.cache_data(show_spinner=False)
 def q_launches(db_path: str, win: str) -> pd.DataFrame:
     with duckdb.connect(db_path, read_only=True) as c:
-        return c.execute("""
+        return c.execute(
+            """
             SELECT cycle, stations_reporting, pct_reporting
             FROM launches_by_cycle
             WHERE window_label = ?
             ORDER BY cycle
-        """, [win]).df()
+        """,
+            [win],
+        ).df()
+
 
 @st.cache_data(show_spinner=False)
 def q_missingness(db_path: str, win: str) -> pd.DataFrame:
     with duckdb.connect(db_path, read_only=True) as c:
-        return c.execute("""
+        return c.execute(
+            """
             SELECT date, band, pct_present
             FROM missingness_by_band
             WHERE window_label = ?
             ORDER BY date, band
-        """, [win]).df()
+        """,
+            [win],
+        ).df()
+
 
 @st.cache_data(show_spinner=False)
 def q_bandstats(db_path: str, win: str) -> pd.DataFrame:
     with duckdb.connect(db_path, read_only=True) as c:
-        return c.execute("""
+        return c.execute(
+            """
             SELECT date, band,
                    t_med, t_p95, td_med, td_p95, wind_med, wind_p95
             FROM band_stats_daily
             WHERE window_label = ?
             ORDER BY date, band
-        """, [win]).df()
+        """,
+            [win],
+        ).df()
+
 
 @st.cache_data(show_spinner=False)
 def q_uptime(db_path: str, win: str) -> pd.DataFrame:
     with duckdb.connect(db_path, read_only=True) as c:
-        return c.execute("""
+        return c.execute(
+            """
             SELECT station, last_seen, days_since_last
             FROM station_uptime
             WHERE window_label = ?
             ORDER BY days_since_last, station
-        """, [win]).df()
+        """,
+            [win],
+        ).df()
+
 
 # --- Top KPIs (quick read) ---
 kcol1, kcol2, kcol3 = st.columns(3)
@@ -83,7 +106,9 @@ try:
     launches = q_launches(db_file, win)
     if not launches.empty:
         latest = launches.iloc[-1]
-        kcol1.metric("Stations reporting (last cycle)", int(latest["stations_reporting"]))
+        kcol1.metric(
+            "Stations reporting (last cycle)", int(latest["stations_reporting"])
+        )
         kcol2.metric("% Reporting (last cycle)", f"{latest['pct_reporting']:.1f}%")
         kcol3.metric("Cycles in window", launches["cycle"].nunique())
 except Exception as e:
@@ -134,7 +159,9 @@ stats = q_bandstats(db_file, win)
 if stats.empty:
     st.info("No band statistics for this window.")
 else:
-    metric = st.selectbox("Metric", ["Temperature (°C)", "Dewpoint (°C)", "Wind speed (m/s)"], index=0)
+    metric = st.selectbox(
+        "Metric", ["Temperature (°C)", "Dewpoint (°C)", "Wind speed (m/s)"], index=0
+    )
     if metric.startswith("Temp"):
         med_col, p95_col = "t_med", "t_p95"
     elif metric.startswith("Dew"):
@@ -143,7 +170,9 @@ else:
         med_col, p95_col = "wind_med", "wind_p95"
 
     bands2 = stats["band"].unique().tolist()
-    sel_bands2 = st.multiselect("Bands (stats)", bands2, default=bands2, key=f"bands_stats_{win}")
+    sel_bands2 = st.multiselect(
+        "Bands (stats)", bands2, default=bands2, key=f"bands_stats_{win}"
+    )
 
     if sel_bands2:
         med = (
