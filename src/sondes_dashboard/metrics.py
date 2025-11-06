@@ -11,12 +11,10 @@ tables for the dashboard:
 from __future__ import annotations
 
 import argparse
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import duckdb
-import numpy as np
-import pandas as pd
 
 WINDOWS = {
     "7d": 7,
