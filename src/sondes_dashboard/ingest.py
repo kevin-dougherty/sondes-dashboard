@@ -37,8 +37,8 @@ def fetch_igra(
 
     Args:
         station: IGRA2 station ID (e.g., ``"USM00072201"``).
-        start: Inclusive UTC start datetime.
-        end: Inclusive UTC end datetime.
+        start: Inclusive UTC start datetime (timezone-aware).
+        end: Inclusive UTC end datetime (timezone-aware).
         synoptic_only: If True, keep only 00/12Z cycles.
 
     Returns:
@@ -48,28 +48,45 @@ def fetch_igra(
 
     Raises:
         ValueError: If ``start``/``end`` are not timezone-aware UTC.
-
-    Notes:
-        - Siphon parses and unit-normalizes the IGRA2 text under the hood.
     """
+    # Enforce UTC-aware inputs at the API boundary
     if start.tzinfo is None or end.tzinfo is None:
         raise ValueError("start/end must be timezone-aware UTC")
+    if start.tzinfo is not UTC or end.tzinfo is not UTC:
+        raise ValueError("start/end must have tzinfo=UTC")
 
-    df, header = IGRAUpperAir.request_data((start, end), station)
+    # IGRAUpperAir expects naive datetimes; strip tz just for the request
+    start_naive = start.replace(tzinfo=None)
+    end_naive = end.replace(tzinfo=None)
+
+    df, header = IGRAUpperAir.request_data((start_naive, end_naive), station)
     if df is None or df.empty:
         return pd.DataFrame()
 
     df = df.copy()
     df["station"] = station
 
+    # IGRA2 gives us a 'date' column; normalize that to a tz-aware 'time'
+    if "date" not in df.columns:
+        # Defensive: if something really weird happens, bail cleanly
+        return pd.DataFrame()
+
+    df["time"] = pd.to_datetime(df["date"])
+    # Make it UTC-aware (archive is effectively in UTC)
+    if df["time"].dt.tz is None:
+        df["time"] = df["time"].dt.tz_localize("UTC")
+    else:
+        df["time"] = df["time"].dt.tz_convert("UTC")
+
     # Normalize common columns for downstream consistency.
+    # Column names here match IGRA2 (speed/direction/height/etc.)
     rename = {
         "geopotential_height": "gph",
         "height": "gph",
         "dewpoint": "td",
         "temperature": "t",
-        "wind_speed": "wspd",
-        "wind_direction": "wdir",
+        "speed": "wspd",
+        "direction": "wdir",
     }
     df = df.rename(columns={k: v for k, v in rename.items() if k in df.columns})
 
@@ -80,8 +97,10 @@ def fetch_igra(
     if synoptic_only and "time" in df.columns:
         df = df[df["time"].dt.hour.isin([0, 12])].reset_index(drop=True)
 
-    # De-dup (safe for overlapping windows / repeated runs).
-    df = df.drop_duplicates(subset=["station", "time", "pressure"])
+    # Only de-dup if we actually have the full key
+    subset_cols = [c for c in ["station", "time", "pressure"] if c in df.columns]
+    if subset_cols:
+        df = df.drop_duplicates(subset=subset_cols)
 
     return df
 
